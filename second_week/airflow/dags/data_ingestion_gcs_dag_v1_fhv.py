@@ -1,0 +1,103 @@
+import os
+import logging
+import pendulum
+
+from airflow.decorators import dag, task
+from airflow.operators.bash import BashOperator
+from airflow.operators.python import PythonOperator, get_current_context
+from airflow.providers.google.cloud.operators.bigquery import BigQueryCreateExternalTableOperator
+from airflow.utils.dates import days_ago
+
+from google.cloud import storage
+
+from pyarrow import csv, parquet, Table
+import pandas as pd
+
+PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
+BUCKET = os.environ.get("GCP_GCS_BUCKET")
+
+dataset_url = f"https://github.com/DataTalksClub/nyc-tlc-data/releases/download/fhv/"
+path_to_local_home = os.environ.get("AIRFLOW_HOME", "/opt/airflow/")
+BIGQUERY_DATASET = os.environ.get("BIGQUERY_DATASET", 'trips_data_all')
+
+
+@dag(
+    schedule="@monthly",
+    start_date=pendulum.datetime(2019, 1, 1, tz="UTC"),
+    catchup=True,
+    max_active_runs=3,
+    tags=["fhv_taxi_data"]
+)
+def fhv_taxi_data_dag_v1():
+    """
+    ### DAG for an upload FHV data from github to GCS
+    This is a simple data pipeline which demonstrated how simple 
+    is uploading a data from csv to GCS
+    """
+
+    @task()
+    def build_csv_filename() -> str:
+        """
+        The task gets a date of execution from DAGs context
+        and builds a filename, after that downloads the file
+        from url
+        """
+        context = get_current_context()
+        execution_date = context.get('dag_run').execution_date
+        month = f"0{execution_date.month}" if execution_date.month < 10 else f"{execution_date.month}"
+        filename = f"fhv_tripdata_{execution_date.year}-{month}.csv.gz"
+        return filename
+
+    @task
+    def transform_csv_to_parquet(src: str) -> str:
+        """The task transforms .csv file to .parquet
+        and saves it on the disk"""
+        if not src.endswith('.csv.gz'):
+            logging.error(
+                "Can only accept source files in CSV format, for the moment")
+            return
+        parqeut_src = src.replace('.csv.gz', '.parquet')
+        df = pd.read_csv(src, error_bad_lines=False)
+        table = Table.from_pandas(df)
+        parquet.write_table(table, parqeut_src)
+        return parqeut_src
+
+    @task
+    def upload_to_gcs(local_file: str) -> str:
+        client = storage.Client()
+        bucket = client.bucket(BUCKET)
+
+        blob = bucket.blob(local_file)
+        blob.upload_from_filename(f"{path_to_local_home}/{local_file}")
+        return local_file
+
+    @task
+    def cgs_to_biquery(object_name: str) -> None:
+        BigQueryCreateExternalTableOperator(
+            task_id="bigquery_external_table_task",
+            table_resource={
+                "tableReference": {
+                    "projectId": PROJECT_ID,
+                    "datasetId": BIGQUERY_DATASET,
+                    "tableId": "external_table",
+                },
+                "externalDataConfiguration": {
+                    "sourceFormat": "PARQUET",
+                    "sourceUris": [f"gs://{BUCKET}/raw/{object_name}"],
+                },
+            },
+        )
+
+    filename = build_csv_filename()
+    extract = BashOperator(
+        task_id="download_ytd_dataset_from_web",
+        bash_command=f"wget {dataset_url}{filename} -O {path_to_local_home}/{filename}"
+    )
+    transform = transform_csv_to_parquet(filename)
+    load = upload_to_gcs(transform)
+    move_to_bq = cgs_to_biquery(load)
+
+    filename >> extract >> transform >> load >> move_to_bq
+
+
+fhv_taxi_data_dag_v1()

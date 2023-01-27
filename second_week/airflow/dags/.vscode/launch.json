@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Airflow Test",
+            "type": "python",
+            "request": "launch",
+            "program": "/opt/airflow",
+            "console": "integratedTerminal",
+            "args": [
+                "dags",
+                "test",
+                "yellow_taxi_data_dag",
+            ]
+        }
+    ]
+}
