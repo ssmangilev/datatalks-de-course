@@ -1,15 +1,26 @@
 ###
 ### A complete description of a Prefect Deployment for flow 'etl-parent-flow'
 ###
-name: Parameterized ETL
+name: test_etl_flow
 description: null
-version: e3bd4d4d1f5bfd1a07282eb0555ff074
+version: 56237ee25ae0f9546f8d4100285ca2c6
 # The work queue that will handle this deployment's runs
 work_queue_name: default
 tags: []
-parameters: {}
+parameters:
+  months:
+  - 11
+  years:
+  - 2020
+  color: green
 schedule: null
 infra_overrides: {}
+
+###
+### DO NOT EDIT BELOW THIS LINE
+###
+flow_name: etl-parent-flow
+manifest_path: null
 infrastructure:
   type: process
   env: {}
@@ -18,16 +29,21 @@ infrastructure:
   command: null
   stream_output: true
   working_dir: null
+  _block_document_id: c742096b-f26a-4655-b79a-68045e2b8757
+  _block_document_name: anonymous-ed0a108e-d5de-4483-94aa-3290f30cd592
+  _is_anonymous: true
   block_type_slug: process
   _block_type_slug: process
-
-###
-### DO NOT EDIT BELOW THIS LINE
-###
-flow_name: etl-parent-flow
-manifest_path: null
-storage: null
-path: /home/anberlin/courses/datatalksclub/data_engineering_zoomcamp/datatalks-de-course/second_week/prefect
+storage:
+  repository: https://github.com/ssmangilev/datatalks-de-course/
+  reference: null
+  access_token: '**********'
+  _block_document_id: afd92025-b9d2-4e13-973a-060467050a7c
+  _block_document_name: github-code
+  _is_anonymous: false
+  block_type_slug: github
+  _block_type_slug: github
+path: ''
 entrypoint: parameterized_flow.py:etl_parent_flow
 parameter_openapi_schema:
   title: Parameters
@@ -62,14 +78,10 @@ parameter_openapi_schema:
       type: array
       items:
         type: integer
-    colors:
-      title: colors
-      default:
-      - yellow
-      - green
+    color:
+      title: color
+      default: green
       position: 2
-      type: array
-      items:
-        type: string
+      type: string
   required: null
   definitions: null
