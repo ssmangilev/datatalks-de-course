@@ -1,4 +1,5 @@
 from datetime import timedelta
+import os
 from pathlib import Path
 import pandas as pd
 from prefect import flow, task
@@ -32,8 +33,11 @@ def clean(df: pd.DataFrame, color: str) -> pd.DataFrame:
 
 @task(log_prints=True)
 def write_local(df: pd.DataFrame, color: str, dataset_file: str) -> Path:
+    print(os.getcwd())
     """Write DataFrame out locally as parquet file"""
-    path = Path(f"data/{color}/{dataset_file}.parquet")
+    path = Path(f"./data/{color}/{dataset_file}.parquet")
+    if not os.path.exists(f"data/{color}"):
+        os.makedirs(f"./data/{color}")
     df.to_parquet(path, compression="gzip")
     return path
 
@@ -46,7 +50,7 @@ def write_to_gcs(path: Path) -> None:
                                                     to_path=path)
 
 
-@flow()
+@flow(log_prints=True)
 def etl_web_to_gcs(year: int, month: int, color: str) -> None:
     """The Main ETL function"""
     dataset_file = f"{color}_tripdata_{year}-{month:02}"
@@ -68,4 +72,4 @@ def etl_parent_flow(
 
 
 if __name__ == '__main__':
-    etl_parent_flow()
+    etl_parent_flow(months=[11], years=[2020], color="green")
