@@ -1,0 +1,10 @@
+my-profile:
+    target: dev
+    outputs:
+        dev:
+          type: bigquery
+          method: oauth
+          project: instant-pivot-375017
+          dataset: trips_data_all
+          location: EU
+  
