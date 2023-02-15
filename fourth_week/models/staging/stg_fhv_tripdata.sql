@@ -3,13 +3,13 @@
 with tripdata as 
 (
   select *,
-    row_number() over(partition by CAST(dispatching_base_num as integer), pickup_datetime) as rn
+    row_number() over(partition by CAST(dispatching_base_num as string), pickup_datetime) as rn
   from {{ source('staging','fhv_rides') }}
 )
 select
     -- identifiers
     {{ dbt_utils.surrogate_key(['dispatching_base_num', 'pickup_datetime']) }} as tripid,
-    cast(pulocationid as integer) as dropoff_locationid,
+    cast(pulocationid as integer) as pickup_locationid,
     cast(dolocationid as integer) as dropoff_locationid,
     
     -- timestamps
