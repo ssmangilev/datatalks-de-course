@@ -14,6 +14,7 @@ sources:
       tables:
         - name: green_tripdata
         - name: yellow_tripdata
+        - name: fhv_rides
          # freshness:
            # error_after: {count: 6, period: hour}
 
@@ -200,3 +201,43 @@ models:
             description: Total amount of all tolls paid in trip.
           - name: Total_amount 
             description: The total amount charged to passengers. Does not include cash tips.
+    - name: stg_fhv_tripdata
+      description: > 
+        The For-Hire Vehicle ("FHV") trip records include fields capturing the dispatching base license number and the pick-up date, time, and taxi zone location ID (shape file below).
+        These records are generated from the FHV Trip Record submissions made by bases.
+      columns:
+          - name: tripid
+            description: Primary key for this table, generated with a concatenation of dispatching_base_num+pickup_datetime
+            tests:
+                - unique:
+                    severity: warn
+                - not_null:
+                    severity: warn
+          - name: Dispatching_base_num 
+            description: > 
+                The TLC Base License Number of the base that dispatched the trip
+          - name: pickup_datetime 
+            description: The date and time of the trip pick-up
+          - name: dropoff_datetime 
+            description: The date and time of the trip dropoff
+          - name: Pickup_locationid
+            description: locationid where the meter was engaged.
+            tests:
+              - relationships:
+                  to: ref('taxi_zone_lookup')
+                  field: locationid
+                  severity: warn
+          - name: dropoff_locationid 
+            description: locationid where the meter was engaged.
+            tests:
+              - relationships:
+                  to: ref('taxi_zone_lookup')
+                  field: locationid
+                  severity: warn
+          - name: SR_Flag 
+            description: > 
+              Indicates if the trip was a part of a shared ride chain offered by a
+              High Volume FHV company (e.g. Uber Pool, Lyft Line). For shared   
+              trips, the value is 1. For non-shared rides, this field is null.
+          - name: affiliated_base_number 
+            description: affiliated_base_number
