@@ -5,7 +5,6 @@ with tripdata as
   select *,
     row_number() over(partition by CAST(dispatching_base_num as integer), pickup_datetime) as rn
   from {{ source('staging','fhv_rides') }}
-  where vendorid is not null 
 )
 select
     -- identifiers
